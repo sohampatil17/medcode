@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Coding System - AI-Powered ICD-10 Automation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital-alt me-2"></i>
+                Medical Coding System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-brain me-1"></i>
+                    Powered by AI & Temporal
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Left Panel - Document Input -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-plus me-2"></i>
+                        Document Input
+                    </div>
+                    <div class="card-body">
+                        <form id="documentForm">
+                            <div class="mb-3">
+                                <label for="patientName" class="form-label">Patient Name</label>
+                                <input type="text" class="form-control" id="patientName" placeholder="Enter patient name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="documentType" class="form-label">Document Type</label>
+                                <select class="form-select" id="documentType">
+                                    <option value="discharge_summary">Discharge Summary</option>
+                                    <option value="emergency_note">Emergency Note</option>
+                                    <option value="consultation">Consultation</option>
+                                    <option value="operative_report">Operative Report</option>
+                                    <option value="progress_note">Progress Note</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="documentContent" class="form-label">Medical Document Content</label>
+                                <textarea class="form-control" id="documentContent" rows="12" placeholder="Paste or type medical document content here..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Sample Documents</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-outline-primary sample-document-btn" onclick="loadSample(0)">
+                                        <i class="fas fa-user me-1"></i>
+                                        Diabetes Case
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary sample-document-btn" onclick="loadSample(1)">
+                                        <i class="fas fa-lungs me-1"></i>
+                                        Pneumonia Case
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary sample-document-btn" onclick="loadSample(2)">
+                                        <i class="fas fa-cut me-1"></i>
+                                        Surgical Case
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-play me-2"></i>
+                                Process Document
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Panel - Results -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-wave-square me-2"></i>
+                        Processing Results
+                    </div>
+                    <div class="card-body">
+                        <!-- Progress Section -->
+                        <div id="progressSection" style="display: none;">
+                            <div class="text-center mb-4">
+                                <div class="loading-spinner mb-3"></div>
+                                <h5 id="progressMessage">Initializing workflow...</h5>
+                                <div class="progress mb-3">
+                                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted" id="progressDetails">Connecting to Temporal...</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Initial State -->
+                        <div id="initialState" class="text-center py-5">
+                            <i class="fas fa-file-medical fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No document processed yet</h5>
+                            <p class="text-muted">Enter a medical document and click "Process Document" to begin</p>
+                        </div>
+                        
+                        <!-- Results Section -->
+                        <div id="resultsSection" style="display: none;">
+                            <!-- Summary Cards -->
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <div class="summary-card primary">
+                                        <div class="summary-number" id="totalCodes">0</div>
+                                        <div class="summary-label">Total Codes</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="summary-card success">
+                                        <div class="summary-number" id="confidenceScore">0.0%</div>
+                                        <div class="summary-label">Confidence</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Diagnosis Codes -->
+                            <div class="mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-search me-2"></i>
+                                    Diagnosis Codes
+                                </h6>
+                                <div id="diagnosisCodes" class="list-group">
+                                    <div class="text-muted text-center py-3">No codes found</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Procedure Codes -->
+                            <div class="mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-camera me-2"></i>
+                                    Procedure Codes
+                                </h6>
+                                <div id="procedureCodes" class="list-group">
+                                    <div class="text-muted text-center py-3">No codes found</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quality Metrics -->
+                            <div class="mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-list me-2"></i>
+                                    Quality Metrics
+                                </h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="ai-info-item">
+                                            <span class="ai-info-label">Quality Score:</span>
+                                            <span class="ai-info-value" id="qualityScore">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="ai-info-item">
+                                            <span class="ai-info-label">Compliance Score:</span>
+                                            <span class="ai-info-value" id="complianceScore">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- AI Model Information -->
+                            <div class="ai-info-box">
+                                <h6>
+                                    <i class="fas fa-brain me-2"></i>
+                                    AI Model Information
+                                </h6>
+                                <div class="ai-info-item">
+                                    <span class="ai-info-label">AI Model:</span>
+                                    <span class="ai-info-value" id="aiModel">Claude 3.5 Sonnet (Amazon Bedrock)</span>
+                                </div>
+                                <div class="ai-info-item">
+                                    <span class="ai-info-label">Processing Time:</span>
+                                    <span class="ai-info-value" id="processingTime">0.00 seconds</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Error Section -->
+                        <div id="errorSection" class="alert alert-danger" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="errorMessage">An error occurred</span>
+                        </div>
+
+                <!-- Demo Section -->
+                <div class="demo-section mb-4">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-rocket me-2"></i>
+                                🚀 Amazon Bedrock AI Demo - Quick Test
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                Test the Amazon Bedrock AI workflow with real AI-powered medical coding:
+                            </p>
+                            <div class="d-grid gap-2 d-md-flex">
+                                <button class="btn btn-success" onclick="demoTemporalResults()">
+                                    <i class="fas fa-play me-2"></i>
+                                    Show AI Results
+                                </button>
+                                <button class="btn btn-info" onclick="demoNewWorkflow()">
+                                    <i class="fas fa-plus me-2"></i>
+                                    Start AI Workflow
+                                </button>
+                                <button class="btn btn-warning" onclick="clearResults()">
+                                    <i class="fas fa-trash me-2"></i>
+                                    Clear Results
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="text-center">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="footer-item">
+                        <i class="fas fa-shield-alt"></i>
+                        HIPAA Compliant
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="footer-item">
+                        <i class="fas fa-server"></i>
+                        Powered by Temporal
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="footer-item">
+                        <i class="fas fa-brain"></i>
+                        AI-Powered by Amazon Bedrock
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html> 
